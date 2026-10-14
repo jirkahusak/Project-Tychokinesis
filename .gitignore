@@ -1,0 +1,31 @@
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+
+# Data
+data/raw/
+data/processed/
+*.csv
+*.pkl
+*.pickle
+*.joblib
+*.json
+*.html
+
+# Logs
+*.log
+logs/
