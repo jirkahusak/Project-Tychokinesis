@@ -15,6 +15,7 @@ venv/
 ENV/
 env/
 .venv
+.env
 
 # Data
 data/raw/
