@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 import shutil
-import gc
 import numpy as np
 
 
@@ -215,7 +214,7 @@ def create_features(pd_input: pd.DataFrame):
     pd_features =  pd_features.dropna(subset=player_cols).reset_index(drop=True)
     pd_features = pd_features[pd_features['minutes_played'] > 0]
     training_features = ['is_home', 'position_id', 'attack_index', 'defense_index'] + player_cols
-    pd_features = pd_features[training_features + ["xg","xa"]]
+    pd_features = pd_features[training_features + ["xg","xa","player_id"]]
 
     pd_features.to_parquet(target_folder / 'training.parquet', compression='snappy', index=False)
 
@@ -300,7 +299,7 @@ def create_features(pd_input: pd.DataFrame):
     
 
 
-def concat_gameweeks(folder_path:str | Path):
+def concat_gameweeks(folder_path:str | Path) -> pd.DataFrame:
     """Reads matching files in folder_path and concatenates them."""
     folder_path = Path(folder_path)
 
@@ -314,6 +313,15 @@ def concat_gameweeks(folder_path:str | Path):
         df_list.append(df)
 
     pd_output = pd.concat(df_list, ignore_index=True)
+
+    # Check blank matches
+    row_blank = pd_output[['xg', 'xa']].isna().all(axis=1)
+    match_blank = row_blank.groupby(pd_output['match_id']).all()  
+    pd_output['stats_missing'] = pd_output['match_id'].isin(match_blank[match_blank].index)
+    pd_output = pd_output[~pd_output["stats_missing"]]
+    pd_output = pd_output.drop(columns=["stats_missing"])
+    pd_output = pd_output.fillna(0)
+    
 
     print('Succesfully joined all gameweeks into one DataFrame')
     return pd_output
@@ -332,11 +340,15 @@ def join_data(folder_path:str | Path,start_gw:int,end_gw:int, start_season:int,e
         pd_playerstats = pd.read_csv(folder_path / f"playermatchstats{season}_{gameweek}.csv")
         pd_matches = pd.read_csv(folder_path / f"matches{season}_{gameweek}.csv")
         pd_players = pd.read_csv(folder_path / f"players{season}_{gameweek}.csv")
+        assert pd_players['player_id'].is_unique, f"duplicate player_id in players{season}_{gameweek}.csv"
 
         pd_stats_matches = pd.merge(left=pd_playerstats,right=pd_matches,on="match_id")
         pd_full = pd.merge(left=pd_stats_matches,right=pd_players,on="player_id")
         pd_full['season'] = season
         pd_full['gameweek'] = gameweek
+        pd_full = pd_full.drop(columns="player_id")
+        pd_full = pd_full.rename(columns={"player_code":"player_id"})
+        print(len(pd_playerstats) == len(pd_full))
 
         return pd_full
 
