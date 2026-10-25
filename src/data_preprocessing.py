@@ -129,25 +129,14 @@ def create_features(pd_input: pd.DataFrame):
                     ,'xg','xa'
                     ,'shots_on_target'
                     ,'chances_created'
-                    ,'tackles_won'
-                    ,'interceptions'
-                    ,'recoveries'
-                    ,'blocks'
-                    ,'clearances'
-                    ,'was_fouled'
-                    ,'fouls_committed'
                     ,'saves','team_goals_conceded'
                     ,'xgot_faced'
-                    ,'penalties_scored'
-                    ,'penalties_missed'
                     ,'accurate_crosses'
                     ,'successful_dribbles'
                     ,'big_chances_missed'
                     ,'defensive_contrib']
 
     
-    facts = ['position_id'
-             ,'is_home']
 
     def_cols = ['clearances', 'blocks', 'interceptions', 'tackles_won', 'recoveries']
     pd_features[def_cols] = pd_features[def_cols].fillna(0)
