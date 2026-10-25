@@ -41,6 +41,7 @@ def create_features(pd_input: pd.DataFrame):
     base_dir = Path(__file__).resolve().parent.parent 
     target_folder = base_dir / "data/processed/features"
     target_folder.mkdir(parents=True, exist_ok=True)
+    pd_input["kickoff_time"] = pd.to_datetime(pd_input["kickoff_time"], format="ISO8601", utc=True)
 
 
     def shifted_ewm(x,span=5):
@@ -93,7 +94,12 @@ def create_features(pd_input: pd.DataFrame):
 
     gw_avg = pd_matches_concat.groupby(['season','gameweek'])['team_xg'].mean()
     league_prior = gw_avg.expanding().mean().shift(1)
-    pd_matches_concat['league_xg_avg'] = pd.MultiIndex.from_frame(pd_matches_concat[['season','gameweek']]).map(league_prior)
+    league_prior_df = league_prior.rename('league_xg_avg').reset_index()
+    pd_matches_concat = pd_matches_concat.merge(
+        league_prior_df, 
+        on=['season', 'gameweek'], 
+        how='left'
+    )
 
     pd_matches_concat = pd_matches_concat[["gameweek","team","match_id","xg_for_ewm","xg_away_ewm","league_xg_avg","kickofftime"]]
 
@@ -203,7 +209,7 @@ def create_features(pd_input: pd.DataFrame):
     pd_features =  pd_features.dropna(subset=player_cols).reset_index(drop=True)
     pd_features = pd_features[pd_features['minutes_played'] > 0]
     training_features = ['is_home', 'position_id', 'attack_index', 'defense_index'] + player_cols
-    pd_features = pd_features[training_features + ["xg","xa","player_id"]]
+    pd_features = pd_features[training_features + ["xg","xa","player_id", 'kickofftime']]
 
     pd_features.to_parquet(target_folder / 'training.parquet', compression='snappy', index=False)
 
