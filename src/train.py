@@ -10,6 +10,8 @@ import joblib
 
 def target_split(pd_input:pd.DataFrame, target:str) -> tuple[pd.DataFrame, pd.Series]:
     """Creates X and y for pd_input based on target (xg or xa)."""
+    pd_input = pd_input[pd_input["position_id"] != 1]
+
     if target.lower() == "xg":
         X = pd_input[['is_home', 'attack_index', 'defense_index','total_shots_ewm_per90', 'xg_ewm_per90',
              'shots_on_target_ewm_per90', 'successful_dribbles_ewm_per90', 'big_chances_missed_ewm_per90'
