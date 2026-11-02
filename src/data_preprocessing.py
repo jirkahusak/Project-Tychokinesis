@@ -208,8 +208,8 @@ def create_features(pd_input: pd.DataFrame):
     player_cols = ['minutes_played_ewm', 'p_is_out', 'p_is_partial', 'p_is_full'] + [c for c in pd_features.columns if c.endswith('_ewm_per90')]
     pd_features =  pd_features.dropna(subset=player_cols).reset_index(drop=True)
     pd_features = pd_features[pd_features['minutes_played'] > 0]
-    training_features = ['is_home', 'position_id', 'attack_index', 'defense_index'] + player_cols
-    pd_features = pd_features[training_features + ["xg","xa","player_id", 'kickofftime']]
+    training_features = ['is_home', 'position_id', 'attack_index', 'defense_index', 'minutes_played'] + player_cols
+    pd_features = pd_features[training_features + ["xg","xa","player_id", 'kickofftime', 'saves']]
 
     pd_features.to_parquet(target_folder / 'training.parquet', compression='snappy', index=False)
 
@@ -273,7 +273,7 @@ def create_features(pd_input: pd.DataFrame):
     pd_full = pd_played[pd_played >= 60]
 
     partial_bins = [(1, 9), (10, 19), (20, 29), (30, 39), (40, 59)]
-    full_bins = [(60, 74), (75, 89), (90, 120)]
+    full_bins = [(60, 69), (70, 79), (80, 89), (90, 90)]
 
     def bin_table(values,buckets):
         rows = [{'low': lo, 'high': hi, 'count': ((values >= lo) & (values <= hi)).sum()} for lo,hi in buckets]
