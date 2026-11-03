@@ -268,7 +268,8 @@ def prepare_features(matches_pd: pd.DataFrame) -> pd.DataFrame:
     saves_features = pd.DataFrame({"is_home": matches_pd['is_home'], "attack_index": matches_pd['attack_index'], "defense_index": matches_pd['defense_index'],
                                     "saves_ewm_per90": matches_pd['saves_ewm_per90'], "xgot_faced_ewm_per90": matches_pd['xgot_faced_ewm_per90'], "position_id": matches_pd['position_id'], "player_id": matches_pd['player_id']})
     
-    other_features = pd.DataFrame({"is_out": matches_pd['is_out'], "is_partial": matches_pd['is_partial'], "is_full": matches_pd['is_full'], "position_id": matches_pd['position_id'], "player_id": matches_pd['player_id']})
+    other_features = pd.DataFrame({"is_out": matches_pd['is_out'], "is_partial": matches_pd['is_partial'], "is_full": matches_pd['is_full'], "position_id": matches_pd['position_id'], "defensive_contrib": matches_pd['defensive_contrib'], 
+                                   "player_id": matches_pd['player_id'], "team": matches_pd['team'], "opponent": matches_pd['opponent']})
     
     xg_features = xg_features[xg_features['position_id'] != 1]
     xa_features = xa_features[xa_features['position_id'] != 1]
