@@ -49,6 +49,8 @@ def update_state(start_season: int, end_season: int, end_gw: int):
     pd_league = pd.read_parquet(destination / "league_state.parquet", engine='pyarrow')
     pd_players = pd.read_parquet(destination / "players_state.parquet", engine='pyarrow')
     pd_teams = pd.read_parquet(destination / "teams_state.parquet", engine='pyarrow')
+    pd_partial = pd.read_parquet(destination / "minutes_partial.parquet", engine="pyarrow")
+    pd_full = pd.read_parquet(destination / "minutes_full.parquet", engine="pyarrow")
 
 
     for season in range(start_season,end_season+1):
@@ -63,6 +65,7 @@ def update_state(start_season: int, end_season: int, end_gw: int):
 
             pd_playermatchstats_new = pd.read_csv(playermatchstats_url)
             pd_matches = pd.read_csv(matches_url)
+            pd_matches["season"] = season
             pd_matches["kickoff_time"] = pd.to_datetime(pd_matches["kickoff_time"], format="ISO8601", utc=True)
             pd_players_new = pd.read_csv(players_url)
 
@@ -130,7 +133,6 @@ def update_state(start_season: int, end_season: int, end_gw: int):
 
                     pd_teams.loc[pd_teams['team'] == team, 'last_gw'] = stats['gameweek'].iloc[-1]
                 else:
-                    # TODO: Look if you can use our function!
                     new_team = pd.DataFrame({'team':[team],'last_gw': [stats['gameweek'].iloc[-1]],'xg_for_now':[create_ewm(stats['team_xg'])],'xg_away_now':[create_ewm(stats['opp_xg'])]})
                     pd_teams = pd.concat([pd_teams,new_team], ignore_index=True)
 
@@ -173,8 +175,18 @@ def update_state(start_season: int, end_season: int, end_gw: int):
                     new_player = pd.DataFrame(facts_dict | stats_dict)
                     pd_players = pd.concat([pd_players, new_player], ignore_index=True)
 
-            # TODO: update minutes states
 
+            # Update minutes state
+            partial_minutes = pd_grid.loc[pd_grid['is_partial'] == 1, 'minutes_played']
+            full_minutes = pd_grid.loc[pd_grid['is_full'] == 1, 'minutes_played']
+
+            for df, minutes in [(pd_partial, partial_minutes), (pd_full, full_minutes)]:
+                new_count = [((minutes>=row['low']) & (minutes<=row['high'])).sum() for _,row in df.iterrows()]
+                df['count'] = df['count'] + new_count
+                df['p'] = df['count'] / df['count'].sum()
+
+            pd_partial.to_parquet(destination / "minutes_partial.parquet", compression='snappy', index=False)
+            pd_full.to_parquet(destination / "minutes_full.parquet", compression='snappy', index=False)
             pd_league.to_parquet(destination / "league_state.parquet", compression='snappy', index=False)
             pd_players.to_parquet(destination / "players_state.parquet", compression='snappy', index=False)
             pd_teams.to_parquet(destination / "teams_state.parquet", compression='snappy', index=False)
@@ -188,6 +200,7 @@ def scrape_matches(season: int, gameweek: int):
     players_url = f"https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/refs/heads/main/data/20{season}-20{season+1}/By%20Tournament/Premier%20League/GW{gameweek}/players.csv"
 
     pd_matches = pd.read_csv(matches_url)
+    pd_matches["season"] = season
     pd_matches["kickoff_time"] = pd.to_datetime(pd_matches["kickoff_time"], format="ISO8601", utc=True)
     pd_players = pd.read_csv(players_url)
     pd_players["position_id"] = map_id(pd_players)
@@ -199,6 +212,7 @@ def scrape_matches(season: int, gameweek: int):
     pd_gameweek = pd_gameweek.drop(columns="player_id")
     pd_gameweek = pd_gameweek.rename(columns={"player_code":"player_id"})
 
+    pd_gameweek = pd_gameweek.sort_values('kickofftime').drop_duplicates(subset='player_id', keep='first')
 
     return pd_gameweek[['player_id','team','opponent','is_home','position_id','kickofftime','gameweek']]
 
@@ -231,6 +245,7 @@ def prepare_features(matches_pd: pd.DataFrame) -> pd.DataFrame:
 
     matches_pd = matches_pd.merge(pd_players[['player_id', 'minutes_played_now']], on='player_id', how='left')
     matches_pd = matches_pd.rename(columns={"minutes_played_now": 'minutes_played'})
+    matches_pd = matches_pd.dropna(subset=['minutes_played'])
 
 
     per_90_list = ['total_shots'
@@ -268,7 +283,7 @@ def prepare_features(matches_pd: pd.DataFrame) -> pd.DataFrame:
     saves_features = pd.DataFrame({"is_home": matches_pd['is_home'], "attack_index": matches_pd['attack_index'], "defense_index": matches_pd['defense_index'],
                                     "saves_ewm_per90": matches_pd['saves_ewm_per90'], "xgot_faced_ewm_per90": matches_pd['xgot_faced_ewm_per90'], "position_id": matches_pd['position_id'], "player_id": matches_pd['player_id']})
     
-    other_features = pd.DataFrame({"is_out": matches_pd['is_out'], "is_partial": matches_pd['is_partial'], "is_full": matches_pd['is_full'], "position_id": matches_pd['position_id'], "defensive_contrib": matches_pd['defensive_contrib'], 
+    other_features = pd.DataFrame({"is_out": matches_pd['is_out'], "is_partial": matches_pd['is_partial'], "is_full": matches_pd['is_full'], "position_id": matches_pd['position_id'], "defensive_contrib": matches_pd['defensive_contrib_ewm_per90'], 
                                    "player_id": matches_pd['player_id'], "team": matches_pd['team'], "opponent": matches_pd['opponent']})
     
     xg_features = xg_features[xg_features['position_id'] != 1]

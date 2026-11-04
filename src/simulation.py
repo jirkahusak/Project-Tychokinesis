@@ -88,7 +88,7 @@ def monte_carlo(xg_grid: pd.DataFrame,xa_grid: pd.DataFrame,saves_grid: pd.DataF
     # Clean sheet
     goals_df = pd.DataFrame(xg_draws,index=other_features['team'].to_numpy())
     team_goals = goals_df.groupby(level=0).sum()
-    opponent_team_goals = team_goals.reindex(other_features['opponent'].to_numpy()).to_numpy()
+    opponent_team_goals = team_goals.reindex(other_features['opponent'].to_numpy(), fill_value=0).to_numpy()
     clean_sheet = (opponent_team_goals==0) & (minutes >= 60)
 
     clean_sheet_points = np.select([np.isin(position_id,[1,2]), position_id==3],
