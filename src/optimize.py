@@ -56,7 +56,7 @@ def best_player(points_df: pd.DataFrame,budget: int) -> pd.DataFrame:
         squad_cost = prices[chosen].sum()
         squad_points = points[chosen].sum()
         print(f"Squad cost: {squad_cost}, total expected points: {squad_points}")
-        return pd.DataFrame({"names": squad_names,"price": prices[chosen]})
+        return pd.DataFrame({"names": squad_names,"price": prices[chosen], "points": points[chosen]})
 
     
         
