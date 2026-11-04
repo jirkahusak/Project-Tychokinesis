@@ -1,6 +1,6 @@
 # FPL Points & Captain Prediction
 
-A Fantasy Premier League points prediction and squad optimizer, built as a portfolio project.
+A Fantasy Premier League points prediction and squad optimizer.
 
 Pulls historical match/player data, trains models to predict xG, xA, and saves per player, keeps a running "current form" state for every player and team, simulates a gameweek thousands of times to get expected points, then picks the best 15-man squad under the real budget and formation rules.
 
