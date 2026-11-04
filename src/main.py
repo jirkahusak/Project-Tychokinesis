@@ -31,6 +31,7 @@ def main(season:int, gameweek:int, budget:int = 100_000_000, n_runs:int = 50_000
     squad_df = best_player(priced_pd,budget=budget)
 
     if squad_df is not None:
+        print(f"Captain: {squad_df.iloc[squad_df['points'].argmax(),0]}")
         print(squad_df)
 
     return squad_df
